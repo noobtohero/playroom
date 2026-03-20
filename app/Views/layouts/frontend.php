@@ -32,9 +32,15 @@
                         <a class="nav-link" href="<?= base_url('courses') ?>">Courses</a>
                     </li>
                     <?php if(session()->get('isLoggedIn')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="<?= base_url('student/dashboard') ?>">My Learning</a>
-                        </li>
+                        <?php if(session()->get('role') === 'admin'): ?>
+                            <li class="nav-item">
+                                <a class="nav-link text-warning fw-bold" href="<?= base_url('admin/dashboard') ?>">Admin Panel</a>
+                            </li>
+                        <?php else: ?>
+                            <li class="nav-item">
+                                <a class="nav-link" href="<?= base_url('student/dashboard') ?>">My Learning</a>
+                            </li>
+                        <?php endif; ?>
                         <li class="nav-item">
                             <a class="nav-link" href="<?= base_url('logout') ?>">Logout</a>
                         </li>

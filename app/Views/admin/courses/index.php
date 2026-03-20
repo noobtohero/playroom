@@ -53,8 +53,12 @@
                     </td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <a href="<?= base_url('admin/courses/' . $course['id'] . '/sections') ?>" class="btn btn-outline-info" title="Manage Content"><i class="bi bi-list-task"></i> Content</a>
-                            <a href="<?= base_url('admin/courses/edit/' . $course['id']) ?>" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <a href="<?= base_url('admin/courses/' . $course['id'] . '/sections') ?>" class="btn btn-outline-primary" title="Manage Curriculum">
+                                <i class="bi bi-list-task"></i> Curriculum
+                            </a>
+                            <a href="<?= base_url('admin/courses/edit/' . $course['id']) ?>" class="btn btn-outline-secondary" title="Edit Course Info">
+                                <i class="bi bi-pencil"></i>
+                            </a>
                             <a href="<?= base_url('admin/courses/delete/' . $course['id']) ?>" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this course? Sections and lessons will also be deleted.')" title="Delete"><i class="bi bi-trash"></i></a>
                         </div>
                     </td>

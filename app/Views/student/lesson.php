@@ -12,28 +12,73 @@
     </div>
 
     <?php if($current_lesson['type'] == 'video'): ?>
-        <video id="video-player" controls class="w-100 h-100" style="max-height: 100vh;">
+        <!-- Quality Selector -->
+        <div id="quality-bar" style="position:absolute;top:12px;right:16px;z-index:20;display:none;">
+            <select id="quality-select"
+                style="background:rgba(0,0,0,0.65);color:#fff;border:1px solid rgba(255,255,255,0.3);
+                       border-radius:6px;padding:4px 10px;font-size:0.82rem;cursor:pointer;backdrop-filter:blur(4px);">
+                <option value="-1">🔁 Auto</option>
+            </select>
+        </div>
+
+        <video id="video-player" controls autoplay class="w-100 h-100" style="max-height:100vh;">
             <p>Your browser does not support HTML5 video.</p>
         </video>
         
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                var video = document.getElementById('video-player');
-                // Path to m3u8 via StreamController
-                var videoSrc = '<?= base_url('student/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . basename($current_lesson['content_path'])) ?>';
-                
+                var video     = document.getElementById('video-player');
+                var qualBar   = document.getElementById('quality-bar');
+                var qualSel   = document.getElementById('quality-select');
+
+                // ── Full path → supports master.m3u8 (multi-resolution) ────
+                <?php
+                    // Build the stream URL using full relative path stored in DB
+                    // content_path = "uploads/lessons/{course}/{section}/[sub/]master.m3u8"
+                    // We need only the part after "uploads/lessons/{course_id}/{section_id}/"
+                    $prefix   = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
+                    $m3u8Rel  = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
+                ?>
+                var videoSrc  = '<?= base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $m3u8Rel) ?>';
+
                 if (Hls.isSupported()) {
-                    var hls = new Hls({
-                        // Basic security: don't allow debug in production
-                        debug: false,
-                    });
+                    var hls = new Hls({ debug: false });
                     hls.loadSource(videoSrc);
                     hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                        // video.play(); // Auto-play might be blocked by browser
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+                        // Autoplay
+                        video.play().catch(function(){});
+
+                        // Build quality options when manifest has multiple levels
+                        if (data.levels && data.levels.length > 1) {
+                            qualBar.style.display = 'block';
+
+                            data.levels.forEach(function(level, index) {
+                                var opt   = document.createElement('option');
+                                opt.value = index;
+                                // แสดงแค่ความสูงเช่น "480p" — เข้าใจง่าย
+                                opt.text  = level.height ? level.height + 'p' : 'Level ' + (index + 1);
+                                qualSel.appendChild(opt);
+                            });
+                        }
                     });
+
+                    // Quality switch handler
+                    qualSel.addEventListener('change', function() {
+                        hls.currentLevel = parseInt(this.value);  // -1 = Auto ABR
+                    });
+
+                    // Sync selector when ABR switches level automatically
+                    hls.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
+                        if (parseInt(qualSel.value) === -1) return; // user chose Auto — don't override
+                        qualSel.value = data.level;
+                    });
+
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Native HLS (Safari) — no JS quality control
                     video.src = videoSrc;
+                    video.play().catch(function(){});
                 }
             });
         </script>
@@ -44,6 +89,48 @@
             <p>Content Path: <?= esc($current_lesson['content_path']) ?></p>
             <a href="<?= base_url('uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $current_lesson['content_path']) ?>" target="_blank" class="btn btn-outline-light">View Slide (Static)</a>
         </div>
+    <?php elseif($current_lesson['type'] == 'markdown'): ?>
+        <!-- Markdown Viewer -->
+        <div id="md-viewer" style="width:100%;height:100%;overflow-y:auto;background:#1e1e2e;color:#cdd6f4;padding:2rem 2.5rem;">
+            <div id="md-content" style="max-width:820px;margin:0 auto;line-height:1.8;font-size:1rem;"></div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                <?php
+                    $prefix  = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
+                    $mdRel   = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
+                ?>
+                var mdUrl = '<?= base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $mdRel) ?>';
+
+                fetch(mdUrl, { credentials: 'same-origin' })
+                    .then(function(r) {
+                        if (!r.ok) throw new Error('Cannot load markdown: ' + r.status);
+                        return r.text();
+                    })
+                    .then(function(text) {
+                        document.getElementById('md-content').innerHTML = marked.parse(text);
+                    })
+                    .catch(function(e) {
+                        document.getElementById('md-content').innerHTML =
+                            '<p style="color:#f38ba8">โหลดเนื้อหาไม่สำเร็จ: ' + e.message + '</p>';
+                    });
+            });
+        </script>
+        <style>
+            /* Markdown typography inside dark viewer */
+            #md-content h1,#md-content h2 { border-bottom:1px solid #45475a; padding-bottom:.4em; margin-bottom:1em; }
+            #md-content h1 { font-size:1.8rem; color:#cba6f7; }
+            #md-content h2 { font-size:1.4rem; color:#89b4fa; }
+            #md-content h3 { font-size:1.1rem; color:#94e2d5; }
+            #md-content a  { color:#89dceb; }
+            #md-content code { background:#313244; padding:2px 6px; border-radius:4px; font-size:.88em; }
+            #md-content pre  { background:#313244; padding:1rem; border-radius:8px; overflow-x:auto; }
+            #md-content blockquote { border-left:3px solid #cba6f7; padding-left:1rem; color:#a6adc8; }
+            #md-content table  { border-collapse:collapse; width:100%; }
+            #md-content td,#md-content th { border:1px solid #45475a; padding:6px 12px; }
+            #md-content th { background:#313244; }
+        </style>
     <?php else: ?>
         <div class="text-white text-center">
             <i class="bi bi-mic fs-1 mb-3 d-block"></i>
@@ -85,8 +172,12 @@ we'd need to adjust the layout. For now, let's keep it simple.) -->
                                         <i class="bi bi-play-circle-fill fs-5"></i>
                                     <?php elseif($lesson['type'] == 'slide'): ?>
                                         <i class="bi bi-file-earmark-slides-fill fs-5"></i>
-                                    <?php else: ?>
+                                    <?php elseif($lesson['type'] == 'markdown'): ?>
+                                        <i class="bi bi-file-earmark-text-fill fs-5"></i>
+                                    <?php elseif($lesson['type'] == 'podcast'): ?>
                                         <i class="bi bi-mic-fill fs-5"></i>
+                                    <?php else: ?>
+                                        <i class="bi bi-file-fill fs-5"></i>
                                     <?php endif; ?>
                                 </span>
                                 

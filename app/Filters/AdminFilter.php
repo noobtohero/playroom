@@ -25,7 +25,10 @@ class AdminFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null)
     {
-        //
+        $role = session()->get('role');
+        if (! in_array($role, ['super-admin', 'admin'])) {
+            return service('response')->setStatusCode(403)->setBody('Access Denied: Admin privileges required.');
+        }
     }
 
     /**

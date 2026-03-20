@@ -25,7 +25,9 @@ class AuthFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null)
     {
-        //
+        if (! session()->get('isLoggedIn')) {
+            return redirect()->to('login')->with('error', 'Please login to access this area.');
+        }
     }
 
     /**

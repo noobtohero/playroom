@@ -51,13 +51,69 @@
     </div>
 </div>
 
-<div class="card shadow-sm mt-4">
-    <div class="card-header bg-white">
-        <h5 class="mb-0">System Overview</h5>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="<?= base_url('admin/courses') ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">Manage Courses & Lessons</div>
+                            <small class="text-muted">Upload HLS Videos, Slides, and manage content.</small>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="<?= base_url('admin/courses/create') ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">Create New Course</div>
+                            <small class="text-muted">Start a new course and add sections.</small>
+                        </div>
+                        <i class="bi bi-plus-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <p>Welcome to the Playroom Admin CMS. Select an option from the sidebar to manage your platform.</p>
-        <p class="text-muted"><i class="bi bi-info-circle"></i> Phase 1 development restricts full analytics. Basic CRUD operations will be available.</p>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cart-check text-success"></i> Recent Purchases</span>
+                <a href="<?= base_url('admin/purchases') ?>" class="btn btn-sm btn-link text-decoration-none p-0">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="bg-light small font-monospace">
+                            <tr>
+                                <th class="ps-3">User</th>
+                                <th>Course</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="small">
+                            <?php if (empty($recent_purchases)): ?>
+                                <tr><td colspan="3" class="text-center py-3 text-muted">No recent purchases</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($recent_purchases as $p): ?>
+                                    <tr>
+                                        <td class="ps-3"><?= esc($p['user_name']) ?></td>
+                                        <td><?= esc($p['course_title']) ?></td>
+                                        <td class="text-center">
+                                            <span class="badge rounded-pill bg-<?= $p['status'] === 'approved' ? 'success' : ($p['status'] === 'pending' ? 'warning text-dark' : 'danger') ?>" style="font-size: 0.65rem;">
+                                                <?= ucfirst($p['status']) ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <?= $this->endSection() ?>

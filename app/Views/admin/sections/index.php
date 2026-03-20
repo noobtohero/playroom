@@ -39,7 +39,10 @@
                                     <td class="fw-bold"><?= esc($s['title']) ?></td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="#" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSectionModal<?= $s['id'] ?>"><i class="bi bi-pencil"></i> Edit</a>
+                                            <a href="<?= base_url('admin/sections/' . $s['id'] . '/lessons') ?>" class="btn btn-primary">
+                                                <i class="bi bi-play-circle"></i> Lessons
+                                            </a>
+                                            <a href="#" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editSectionModal<?= $s['id'] ?>"><i class="bi bi-pencil"></i></a>
                                             <a href="<?= base_url('admin/sections/delete/' . $s['id']) ?>" class="btn btn-outline-danger" onclick="return confirm('Delete this section? All lessons inside will be deleted too.')"><i class="bi bi-trash"></i></a>
                                         </div>
 

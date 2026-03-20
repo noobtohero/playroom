@@ -51,10 +51,17 @@
     <!-- Simple Header -->
     <header class="learning-header bg-dark text-white p-3 d-flex justify-content-between align-items-center">
         <div>
-            <a href="<?= base_url('student/dashboard') ?>" class="text-white text-decoration-none me-3"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
-            <span class="fw-bold fs-5"><?= $this->renderSection('course_title') ?? 'Course Title' ?></span>
+            <?php if (uri_string() !== 'student/dashboard'): ?>
+                <a href="<?= base_url('student/dashboard') ?>" class="text-white text-decoration-none me-3"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            <?php else: ?>
+                <span class="text-white-50 me-3"><i class="bi bi-person-workspace"></i> My Learning Space</span>
+            <?php endif; ?>
+            <span class="fw-bold fs-5"><?= $this->renderSection('course_title') ?: 'Student Portal' ?></span>
         </div>
         <div>
+            <?php if(session()->get('role') === 'admin'): ?>
+                <a href="<?= base_url('admin/dashboard') ?>" class="btn btn-warning btn-sm me-2">Admin Panel</a>
+            <?php endif; ?>
             <span class="me-3"><?= session()->get('name') ?? 'Student' ?></span>
             <a href="<?= base_url('logout') ?>" class="btn btn-outline-light btn-sm">Logout</a>
         </div>
@@ -62,7 +69,7 @@
 
     <!-- Learning Area -->
     <main class="learning-body">
-        <?php if ($this->hasSection('player')): ?>
+        <?php if (isset($isViewer) && $isViewer): ?>
             <!-- Video/Slide/Audio Player Area -->
             <section class="content-area">
                 <?= $this->renderSection('player') ?>

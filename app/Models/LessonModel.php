@@ -34,7 +34,7 @@ class LessonModel extends Model
         'course_id'  => 'required|is_not_unique[courses.id]',
         'section_id' => 'permit_empty|is_not_unique[sections.id]',
         'title'      => 'required|min_length[3]|max_length[255]',
-        'type'       => 'required|in_list[video,slide,podcast]',
+        'type'       => 'required|in_list[video,slide,podcast,markdown]',
         'status'     => 'required|in_list[draft,published]'
     ];
     protected $validationMessages   = [];

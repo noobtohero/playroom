@@ -13,7 +13,7 @@ class CourseModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'title', 'slug', 'description', 'thumbnail', 'type', 'price', 'status'
+        'title', 'slug', 'description', 'thumbnail', 'type', 'price', 'status', 'author_id'
     ];
 
     protected bool $allowEmptyInserts = false;

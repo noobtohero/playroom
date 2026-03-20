@@ -72,9 +72,6 @@ class AuthController extends BaseController
             'status'   => 'active'
         ];
         
-        // Remove 'password' from data to prevent the model from hashing it again if we manually hashed it.
-        // But our UserModel beforeInsert hook already handles hashing. So passing plain password is correct.
-        
         $userModel->insert($data);
 
         return redirect()->to('login')->with('success', 'Registration successful. You can now login.');
@@ -102,8 +99,11 @@ class AuthController extends BaseController
 
     private function getDashboardRoute($role)
     {
-        if ($role === 'admin') {
+        if (in_array($role, ['super-admin', 'admin'])) {
             return 'admin/dashboard';
+        }
+        if ($role === 'teacher') {
+            return 'teacher/dashboard';
         }
         return 'student/dashboard';
     }

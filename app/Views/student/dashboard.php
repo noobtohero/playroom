@@ -4,21 +4,25 @@
 
 <?= $this->section('content') ?>
 <div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-0">My Learning Dashboard</h2>
-            <p class="text-muted">Welcome back, <?= esc(session()->get('name')) ?>. Here are your enrolled courses.</p>
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <h2 class="fw-bold mb-0">My Learning Dashboard</h2>
+            <p class="text-muted">Welcome back, <?= esc(session()->get('name')) ?>. Ready to continue learning?</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="<?= base_url('student/redeem') ?>" class="btn btn-outline-primary px-4 rounded-pill">
+                <i class="bi bi-ticket-perforated me-2"></i> Redeem Code
+            </a>
         </div>
     </div>
 
-    <!-- Info Alert for Phase 1 -->
-    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4">
-        <i class="bi bi-info-circle-fill me-3 fs-3"></i>
-        <div>
-            <strong>Phase 1 Preview</strong><br>
-            Currently showing all published courses as "enrolled" for demonstration purposes.
-        </div>
-    </div>
+    <?php if (session()->getFlashdata('success')): ?>
+        <div class="alert alert-success border-0 shadow-sm mb-4"><?= session()->getFlashdata('success') ?></div>
+    <?php endif; ?>
+
+    <?php if (session()->getFlashdata('info')): ?>
+        <div class="alert alert-info border-0 shadow-sm mb-4"><?= session()->getFlashdata('info') ?></div>
+    <?php endif; ?>
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         <?php if(empty($my_courses)): ?>

@@ -40,10 +40,10 @@
                         
                         <?php if(session()->get('isLoggedIn')): ?>
                             <?php if($course['type'] == 'paid' || $course['type'] == 'code'): ?>
-                                <button class="btn btn-primary btn-lg w-100 mb-3" disabled><i class="bi bi-lock me-2"></i>Enroll Now (Coming Soon)</button>
+                                <a href="<?= base_url('student/course/' . $course['id']) ?>" class="btn btn-primary btn-lg w-100 mb-3"><i class="bi bi-play-circle me-2"></i>Start Learning (Phase 1 Preview)</a>
                                 <div class="text-center text-muted small mt-2">Payment gateway integration planned for Phase 2.</div>
                             <?php else: ?>
-                                <button class="btn btn-success btn-lg w-100 mb-3"><i class="bi bi-play-circle me-2"></i>Start Learning</button>
+                                <a href="<?= base_url('student/course/' . $course['id']) ?>" class="btn btn-success btn-lg w-100 mb-3"><i class="bi bi-play-circle me-2"></i>Start Learning</a>
                             <?php endif; ?>
                         <?php else: ?>
                             <a href="<?= base_url('login') ?>" class="btn btn-outline-primary btn-lg w-100 mb-3">Sign In to Enroll</a>

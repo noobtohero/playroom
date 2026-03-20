@@ -48,6 +48,27 @@
                                 <i class="bi bi-people me-2"></i> Users
                             </a>
                         </li>
+                        <li class="nav-item border-top mt-2 pt-2">
+                            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase small">
+                                <span>Sales & Access</span>
+                            </h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= (url_is('admin/enrollments*')) ? 'active fw-bold' : '' ?>" href="<?= base_url('admin/enrollments') ?>">
+                                <i class="bi bi-person-plus me-2"></i> Enrollments
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= (url_is('admin/codes*')) ? 'active fw-bold' : '' ?>" href="<?= base_url('admin/codes') ?>">
+                                <i class="bi bi-ticket-perforated me-2"></i> Redeem Codes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= (url_is('admin/purchases*')) ? 'active fw-bold' : '' ?>" href="<?= base_url('admin/purchases') ?>">
+                                <i class="bi bi-wallet2 me-2"></i> Purchases
+                            </a>
+                        </li>
+                        <li class="nav-item border-top mt-2 pt-2"></li>
                         <li class="nav-item">
                             <a class="nav-link" href="<?= base_url() ?>" target="_blank">
                                 <i class="bi bi-box-arrow-up-right me-2"></i> View Site

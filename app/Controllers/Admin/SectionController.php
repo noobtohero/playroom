@@ -10,6 +10,18 @@ use App\Models\CourseModel;
 
 class SectionController extends BaseController
 {
+    private function checkCourseOwnership($courseId)
+    {
+        if (session()->get('role') === 'teacher') {
+            $courseModel = new CourseModel();
+            $course = $courseModel->find($courseId);
+            if (!$course || $course['author_id'] != session()->get('id')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public function index($course_id)
     {
         $courseModel = new CourseModel();
@@ -17,6 +29,10 @@ class SectionController extends BaseController
 
         if (!$data['course']) {
             return redirect()->to('admin/courses')->with('error', 'Course not found');
+        }
+
+        if (!$this->checkCourseOwnership($course_id)) {
+            return redirect()->to('admin/courses')->with('error', 'Unauthorized: You do not own this course');
         }
 
         $sectionModel = new SectionModel();
@@ -30,6 +46,10 @@ class SectionController extends BaseController
 
     public function store($course_id)
     {
+        if (!$this->checkCourseOwnership($course_id)) {
+            return redirect()->to('admin/courses')->with('error', 'Unauthorized: You do not own this course');
+        }
+
         $sectionModel = new SectionModel();
         $data = [
             'course_id'  => $course_id,
@@ -53,6 +73,10 @@ class SectionController extends BaseController
             return redirect()->back()->with('error', 'Section not found');
         }
 
+        if (!$this->checkCourseOwnership($section['course_id'])) {
+            return redirect()->to('admin/courses')->with('error', 'Unauthorized: You do not own this course');
+        }
+
         $data = [
             'title'      => $this->request->getPost('title'),
             'sort_order' => $this->request->getPost('sort_order'),
@@ -69,6 +93,14 @@ class SectionController extends BaseController
     {
         $sectionModel = new SectionModel();
         $section = $sectionModel->find($id);
+
+        if (!$section) {
+            return redirect()->back()->with('error', 'Section not found');
+        }
+
+        if (!$this->checkCourseOwnership($section['course_id'])) {
+            return redirect()->to('admin/courses')->with('error', 'Unauthorized: You do not own this course');
+        }
 
         if ($section) {
             $sectionModel->delete($id);
