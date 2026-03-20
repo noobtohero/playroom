@@ -82,5 +82,47 @@ class StreamController extends BaseController
             ->setHeader('Cache-Control', 'no-store, no-cache')
             ->setBody(file_get_contents($keyPath));
     }
+
+    /**
+     * Downloads a file if allowed.
+     */
+    public function download($courseId, $sectionId, ...$segments)
+    {
+        if (!session()->get('isLoggedIn')) {
+            return redirect()->back()->with('error', 'Please login.');
+        }
+
+        $userId = session()->get('id');
+        $role   = session()->get('role');
+
+        // Access Control
+        if (! in_array($role, ['super-admin', 'admin', 'teacher'])) {
+            $enrollmentModel = new \App\Models\EnrollmentModel();
+            if (! $enrollmentModel->isEnrolled($userId, $courseId)) {
+                return $this->response->setStatusCode(403)->setBody('Access Denied.');
+            }
+        }
+
+        $filename = implode('/', $segments);
+        $filePath = WRITEPATH . 'uploads/lessons/' . $courseId . '/' . $sectionId . '/' . $filename;
+
+        if (!file_exists($filePath)) {
+            return $this->response->setStatusCode(404)->setBody('File not found.');
+        }
+
+        // Check if lesson is actually downloadable
+        $lessonModel = new \App\Models\LessonModel();
+        $lesson = $lessonModel->where([
+            'course_id' => $courseId,
+            'section_id' => $sectionId,
+            'content_path LIKE' => '%'.$filename.'%'
+        ])->first();
+
+        if (!$lesson || !$lesson['is_downloadable']) {
+             return $this->response->setStatusCode(403)->setBody('This file is not authorized for download.');
+        }
+
+        return $this->response->download($filePath, null);
+    }
 }
 

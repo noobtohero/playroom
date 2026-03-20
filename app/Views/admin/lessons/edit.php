@@ -54,6 +54,12 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="external_url" class="form-label fw-bold">External URL (e.g. YouTube, Vimeo)</label>
+                        <input type="url" class="form-control" id="external_url" name="external_url" value="<?= old('external_url', $lesson['external_url']) ?>" placeholder="https://www.youtube.com/watch?v=...">
+                        <div class="form-text">หากใส่ URL ระบบจะใช้ลิงก์นี้แทนการอัปโหลดไฟล์</div>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label fw-semibold">Current Content</label>
                         <div>
                             <?php if($lesson['content_path']): ?>
@@ -102,6 +108,14 @@
                             <option value="draft" <?= (old('status', $lesson['status']) == 'draft') ? 'selected' : '' ?>>Draft</option>
                             <option value="published" <?= (old('status', $lesson['status']) == 'published') ? 'selected' : '' ?>>Published</option>
                         </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_downloadable" name="is_downloadable" value="1" <?= old('is_downloadable', $lesson['is_downloadable']) ? 'checked' : '' ?>>
+                            <label class="form-check-label fw-bold" for="is_downloadable">Allow Download</label>
+                        </div>
+                        <div class="form-text small">อนุญาตให้นักเรียนดาวน์โหลดไฟล์นี้ได้ (เช่น PDF, MP3)</div>
                     </div>
                     
                     <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Update Lesson</button>

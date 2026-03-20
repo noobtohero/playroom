@@ -35,6 +35,7 @@ $routes->group('student', ['filter' => 'auth'], function($routes) {
 $routes->group('media', ['filter' => 'auth'], function($routes) {
     $routes->get('stream/video/(:num)/(:num)/(.+)', 'StreamController::video/$1/$2/$3');
     $routes->get('stream/key/(:any)', 'StreamController::key/$1');
+    $routes->get('download/(:num)/(:num)/(:any)', 'StreamController::download/$1/$2/$3');
 });
 
 // Admin CMS Routes

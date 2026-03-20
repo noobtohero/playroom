@@ -126,14 +126,16 @@ class LessonController extends BaseController
         }
 
         $data = [
-            'course_id'    => $section['course_id'],
-            'section_id'   => $section_id,
-            'title'        => $this->request->getPost('title'),
-            'type'         => $detectedType ?? 'video',  // auto-detected from file
-            'duration'     => $this->request->getPost('duration') ?? 0,
-            'sort_order'   => $this->request->getPost('sort_order') ?? 0,
-            'status'       => $this->request->getPost('status'),
-            'content_path' => $contentPath,
+            'course_id'       => $section['course_id'],
+            'section_id'      => $section_id,
+            'title'           => $this->request->getPost('title'),
+            'type'            => $this->request->getPost('type') ?? ($detectedType ?? 'video'), 
+            'duration'        => $this->request->getPost('duration') ?? 0,
+            'sort_order'      => $this->request->getPost('sort_order') ?? 0,
+            'status'          => $this->request->getPost('status'),
+            'content_path'    => $contentPath,
+            'external_url'    => $this->request->getPost('external_url'),
+            'is_downloadable' => $this->request->getPost('is_downloadable') ? 1 : 0,
         ];
 
         $lessonModel->insert($data);
@@ -181,11 +183,13 @@ class LessonController extends BaseController
         }
 
         $data = [
-            'title'      => $this->request->getPost('title'),
-            'type'       => $this->request->getPost('type'),
-            'duration'   => $this->request->getPost('duration') ?? 0,
-            'sort_order' => $this->request->getPost('sort_order') ?? 0,
-            'status'     => $this->request->getPost('status'),
+            'title'           => $this->request->getPost('title'),
+            'type'            => $this->request->getPost('type'),
+            'duration'        => $this->request->getPost('duration') ?? 0,
+            'sort_order'      => $this->request->getPost('sort_order') ?? 0,
+            'status'          => $this->request->getPost('status'),
+            'external_url'    => $this->request->getPost('external_url'),
+            'is_downloadable' => $this->request->getPost('is_downloadable') ? 1 : 0,
         ];
 
         // Handle File Upload rewrite

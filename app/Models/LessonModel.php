@@ -13,7 +13,7 @@ class LessonModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'course_id', 'section_id', 'title', 'type', 'content_path', 'duration', 'sort_order', 'status'
+        'course_id', 'section_id', 'title', 'type', 'content_path', 'external_url', 'is_downloadable', 'duration', 'sort_order', 'status'
     ];
 
     protected bool $allowEmptyInserts = false;

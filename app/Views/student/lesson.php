@@ -11,7 +11,18 @@
         <?= session()->get('email') ?> | <?= date('Y-m-d H:i') ?>
     </div>
 
-    <?php if($current_lesson['type'] == 'video'): ?>
+    <?php if(!empty($current_lesson['external_url'])): ?>
+        <?php 
+            $url = $current_lesson['external_url'];
+            $embedUrl = $url;
+            if (strpos($url, 'youtube.com') !== false || strpos($url, 'youtu.be') !== false) {
+                // simple yt extract
+                preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $url, $matches);
+                if (isset($matches[1])) $embedUrl = "https://www.youtube.com/embed/" . $matches[1];
+            }
+        ?>
+        <iframe src="<?= $embedUrl ?>" class="w-100 h-100" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <?php elseif($current_lesson['type'] == 'video'): ?>
         <!-- Quality Selector -->
         <div id="quality-bar" style="position:absolute;top:12px;right:16px;z-index:20;display:none;">
             <select id="quality-select"
@@ -138,6 +149,20 @@
             <audio controls class="mt-3">
                 <source src="<?= base_url('uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $current_lesson['content_path']) ?>" type="audio/mpeg">
             </audio>
+        </div>
+    <?php endif; ?>
+
+    <!-- Download Button Overlay if allowed -->
+    <?php if($current_lesson['is_downloadable'] && !empty($current_lesson['content_path'])): ?>
+        <?php 
+            $prefix   = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
+            $fileRel  = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
+            $downloadUrl = base_url('media/download/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $fileRel);
+        ?>
+        <div style="position:absolute;bottom:20px;right:20px;z-index:30;">
+            <a href="<?= $downloadUrl ?>" class="btn btn-sm btn-light shadow-sm">
+                <i class="bi bi-download"></i> Download Content
+            </a>
         </div>
     <?php endif; ?>
 </div>
