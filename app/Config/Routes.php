@@ -31,7 +31,7 @@ $routes->group('student', ['filter' => 'auth'], function($routes) {
     $routes->post('redeem', 'StudentController::redeemAttempt');
 });
 
-// Media Streaming Route (Shared auth)
+// Media Streaming Route (Secured by AuthFilter which handles both Session and Signed URLs)
 $routes->group('media', ['filter' => 'auth'], function($routes) {
     $routes->get('stream/video/(:num)/(:num)/(.+)', 'StreamController::video/$1/$2/$3');
     $routes->get('stream/key/(:any)', 'StreamController::key/$1');

@@ -25,8 +25,32 @@ class AuthFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null)
     {
+        helper('url');
+        // 1. Signature Check (Automatic Bypass for Signed URLs)
+        $expires   = $request->getGet('expires');
+        $signature = $request->getGet('signature');
+        if ($expires && $signature) {
+            $currentUrl = current_url();
+            $isVerified = \App\Helpers\UrlSignerHelper::verify($currentUrl, (string)$signature, (int)$expires);
+            if ($isVerified) {
+                return; // Access Granted via Signature
+            }
+        }
+
+        // 2. Standard Session Check
         if (! session()->get('isLoggedIn')) {
             return redirect()->to('login')->with('error', 'Please login to access this area.');
+        }
+
+        // 3. Account Sharing Protection
+        $userId = session()->get('id');
+        $loginToken = session()->get('login_token');
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find($userId);
+
+        if (!$user || $user['last_session_id'] !== $loginToken) {
+            session()->destroy();
+            return redirect()->to('login')->with('error', 'You have been logged out because another device logged in with your account.');
         }
     }
 

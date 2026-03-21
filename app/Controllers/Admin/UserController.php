@@ -48,8 +48,9 @@ class UserController extends BaseController
         }
         
         $data = [
-            'name'   => $this->request->getPost('name'),
-            'email'  => $this->request->getPost('email'),
+            'name'      => $this->request->getPost('name'),
+            'full_name' => $this->request->getPost('full_name'),
+            'email'     => $this->request->getPost('email'),
         ];
 
         // Explicitly set validation rules for this update to avoid issues with unique email or required password

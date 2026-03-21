@@ -13,19 +13,37 @@ class StreamController extends BaseController
      */
     public function video($courseId, $sectionId, ...$segments)
     {
-        if (!session()->get('isLoggedIn')) {
-            return $this->response->setStatusCode(401)->setBody('Unauthorized: Please login.');
-        }
+        // 1. Signature Check
+        $expires   = $this->request->getGet('expires');
+        $signature = $this->request->getGet('signature');
+        
+        // Base URL for verification (strip query params)
+        $currentUrl = current_url();
+        $isVerified = \App\Helpers\UrlSignerHelper::verify($currentUrl, (string)$signature, (int)$expires);
 
-        $userId = session()->get('id');
-        $role   = session()->get('role');
+        // OPTIONAL: We can allow TS files without signature if the master was signed 
+        // OR we can require it for everything. 
+        // For HLS to work easily, we often only sign the manifest.
+        $filename = implode('/', $segments);
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        // 2. Authorization Logic
+        // If the URL is signed and verified, we trust it (authorized by a view that has access)
+        // If not verified, we check for a valid session and specific permissions.
+        if (! $isVerified) {
+            if (!session()->get('isLoggedIn')) {
+                return $this->response->setStatusCode(401)->setBody('Unauthorized: Please login or provide a valid signature.');
+            }
 
-        // Access Control: Admins/Teachers skip enrollment check
-        // Students must be enrolled in the course
-        if (! in_array($role, ['super-admin', 'admin', 'teacher'])) {
-            $enrollmentModel = new \App\Models\EnrollmentModel();
-            if (! $enrollmentModel->isEnrolled($userId, $courseId)) {
-                return $this->response->setStatusCode(403)->setBody('Access Denied: You are not enrolled in this course.');
+            $userId = session()->get('id');
+            $role   = session()->get('role');
+
+            // Access Control: Students must be enrolled
+            if (! in_array($role, ['super-admin', 'admin', 'teacher'])) {
+                $enrollmentModel = new \App\Models\EnrollmentModel();
+                if (! $enrollmentModel->isEnrolled($userId, $courseId)) {
+                    return $this->response->setStatusCode(403)->setBody('Access Denied: You are not enrolled in this course.');
+                }
             }
         }
 
@@ -51,8 +69,10 @@ class StreamController extends BaseController
             default            => 'video/mp4',
         };
 
+        $file = new \CodeIgniter\Files\File($filePath);
+        
         return $this->response
-            ->setHeader('Content-Type', $mimeType)
+            ->setHeader('Content-Type', $file->getMimeType())
             ->setHeader('Cache-Control', 'no-store, no-cache')
             ->setBody(file_get_contents($filePath));
     }
@@ -88,18 +108,27 @@ class StreamController extends BaseController
      */
     public function download($courseId, $sectionId, ...$segments)
     {
-        if (!session()->get('isLoggedIn')) {
-            return redirect()->back()->with('error', 'Please login.');
-        }
+        // 1. Signature Check First
+        $expires   = $this->request->getGet('expires');
+        $signature = $this->request->getGet('signature');
+        $currentUrl = current_url();
+        $isVerified = \App\Helpers\UrlSignerHelper::verify($currentUrl, (string)$signature, (int)$expires);
 
-        $userId = session()->get('id');
-        $role   = session()->get('role');
+        // 2. Authorization
+        if (!$isVerified) {
+            if (!session()->get('isLoggedIn')) {
+                return redirect()->to('login')->with('error', 'Please login or use a valid download link.');
+            }
 
-        // Access Control
-        if (! in_array($role, ['super-admin', 'admin', 'teacher'])) {
-            $enrollmentModel = new \App\Models\EnrollmentModel();
-            if (! $enrollmentModel->isEnrolled($userId, $courseId)) {
-                return $this->response->setStatusCode(403)->setBody('Access Denied.');
+            $userId = session()->get('id');
+            $role   = session()->get('role');
+
+            // Access Control
+            if (! in_array($role, ['super-admin', 'admin', 'teacher'])) {
+                $enrollmentModel = new \App\Models\EnrollmentModel();
+                if (! $enrollmentModel->isEnrolled($userId, $courseId)) {
+                    return $this->response->setStatusCode(403)->setBody('Access Denied.');
+                }
             }
         }
 

@@ -34,6 +34,15 @@ class DashboardController extends BaseController
                                      ->orderBy('purchases.created_at', 'DESC')
                                      ->limit(5)
                                      ->get()
+                                     ->getResultArray(),
+            'revenue_chart' => $db->table('purchases')
+                                     ->select("DATE(purchases.created_at) as date, SUM(courses.price) as total")
+                                     ->join('courses', 'courses.id = purchases.course_id')
+                                     ->where('purchases.status', 'approved')
+                                     ->where('purchases.created_at >=', date('Y-m-d', strtotime('-30 days')))
+                                     ->groupBy('date')
+                                     ->orderBy('date', 'ASC')
+                                     ->get()
                                      ->getResultArray()
         ];
 

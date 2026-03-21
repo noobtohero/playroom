@@ -7,21 +7,77 @@
 <?= $this->section('player') ?>
 <div class="position-relative w-100 h-100 d-flex align-items-center justify-content-center bg-black">
     <!-- Watermark Overlay -->
-    <div class="watermark">
+    <!-- Watermark Overlay (Moved to Top Right and subtle) -->
+    <div class="watermark" style="top: 15px; left: auto; right: 15px; opacity: 0.25;">
         <?= session()->get('email') ?> | <?= date('Y-m-d H:i') ?>
     </div>
+
+    <style>
+        /* Force Plyr to be Huge and Fill Container */
+        .plyr {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+        }
+        .plyr--video, .plyr__video-wrapper {
+            height: 100% !important;
+            background: #000 !important;
+        }
+        .plyr__video-wrapper video,
+        .plyr__video-wrapper iframe {
+            object-fit: contain !important;
+        }
+        /* Aspect Ratio for Responsive Embed (YouTube) handled by Plyr but we force it to expand */
+        .plyr__video-embed {
+            padding-bottom: 0 !important; /* Remove fixed ratio padding */
+            height: 100% !important;
+        }
+    </style>
+
+    <?php
+        $nextLessonUrl = null;
+        $foundCurrent = false;
+        foreach($sections as $s) {
+            foreach($s['lessons'] as $l) {
+                if ($foundCurrent) {
+                    $nextLessonUrl = base_url('student/course/' . $course['id'] . '/lesson/' . $l['id']);
+                    break 2;
+                }
+                if ($l['id'] == $current_lesson['id']) {
+                    $foundCurrent = true;
+                }
+            }
+        }
+    ?>
 
     <?php if(!empty($current_lesson['external_url'])): ?>
         <?php 
             $url = $current_lesson['external_url'];
             $embedUrl = $url;
             if (strpos($url, 'youtube.com') !== false || strpos($url, 'youtu.be') !== false) {
-                // simple yt extract
                 preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $url, $matches);
-                if (isset($matches[1])) $embedUrl = "https://www.youtube.com/embed/" . $matches[1];
+                if (isset($matches[1])) $embedUrl = "https://www.youtube.com/embed/" . $matches[1] . "?origin=" . base_url() . "&amp;iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1";
             }
         ?>
-        <iframe src="<?= $embedUrl ?>" class="w-100 h-100" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <div id="youtube-player" class="plyr__video-embed w-100" style="height: 100%;">
+            <iframe
+                src="<?= $embedUrl ?>"
+                allowfullscreen
+                allowtransparency
+                allow="autoplay"
+            ></iframe>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const player = new Plyr('#youtube-player', {
+                    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
+                    youtube: { noCookie: true, rel: 0, showinfo: 0, iv_load_policy: 3, modestbranding: 1 }
+                });
+                player.on('ended', () => {
+                    if (nextLessonUrl) window.location.href = nextLessonUrl;
+                });
+            });
+        </script>
     <?php elseif($current_lesson['type'] == 'video'): ?>
         <!-- Quality Selector -->
         <div id="quality-bar" style="position:absolute;top:12px;right:16px;z-index:20;display:none;">
@@ -32,25 +88,27 @@
             </select>
         </div>
 
-        <video id="video-player" controls autoplay class="w-100 h-100" style="max-height:100vh;">
-            <p>Your browser does not support HTML5 video.</p>
-        </video>
+        <video id="video-player" playsinline controls class="w-100 h-100" style="object-fit: contain;"></video>
         
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                var video     = document.getElementById('video-player');
-                var qualBar   = document.getElementById('quality-bar');
-                var qualSel   = document.getElementById('quality-select');
+                const video     = document.getElementById('video-player');
+                const qualBar   = document.getElementById('quality-bar');
+                const qualSel   = document.getElementById('quality-select');
+                
+                // Initialize Plyr
+                const player = new Plyr(video, {
+                    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'fullscreen'],
+                    settings: ['quality', 'speed'],
+                    quality: { default: 576, options: [1080, 720, 576, 480, 360, 240] }
+                });
 
-                // ── Full path → supports master.m3u8 (multi-resolution) ────
                 <?php
-                    // Build the stream URL using full relative path stored in DB
-                    // content_path = "uploads/lessons/{course}/{section}/[sub/]master.m3u8"
-                    // We need only the part after "uploads/lessons/{course_id}/{section_id}/"
                     $prefix   = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
                     $m3u8Rel  = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
                 ?>
-                var videoSrc  = '<?= base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $m3u8Rel) ?>';
+                var videoSrc  = '<?= \App\Helpers\UrlSignerHelper::sign(base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $m3u8Rel)) ?>';
+                var nextLessonUrl = '<?= $nextLessonUrl ?>';
 
                 if (Hls.isSupported()) {
                     var hls = new Hls({ debug: false });
@@ -58,48 +116,159 @@
                     hls.attachMedia(video);
 
                     hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-                        // Autoplay
                         video.play().catch(function(){});
-
-                        // Build quality options when manifest has multiple levels
                         if (data.levels && data.levels.length > 1) {
                             qualBar.style.display = 'block';
-
                             data.levels.forEach(function(level, index) {
                                 var opt   = document.createElement('option');
                                 opt.value = index;
-                                // แสดงแค่ความสูงเช่น "480p" — เข้าใจง่าย
                                 opt.text  = level.height ? level.height + 'p' : 'Level ' + (index + 1);
                                 qualSel.appendChild(opt);
                             });
                         }
                     });
 
-                    // Quality switch handler
                     qualSel.addEventListener('change', function() {
-                        hls.currentLevel = parseInt(this.value);  // -1 = Auto ABR
+                        hls.currentLevel = parseInt(this.value);
                     });
-
-                    // Sync selector when ABR switches level automatically
-                    hls.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
-                        if (parseInt(qualSel.value) === -1) return; // user chose Auto — don't override
-                        qualSel.value = data.level;
-                    });
-
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    // Native HLS (Safari) — no JS quality control
                     video.src = videoSrc;
                     video.play().catch(function(){});
                 }
+
+                player.on('ended', () => {
+                    if (nextLessonUrl) window.location.href = nextLessonUrl;
+                });
             });
         </script>
     <?php elseif($current_lesson['type'] == 'slide'): ?>
-        <div class="text-white text-center">
-            <i class="bi bi-file-earmark-slides fs-1 mb-3 d-block"></i>
-            <h4>Slide Content</h4>
-            <p>Content Path: <?= esc($current_lesson['content_path']) ?></p>
-            <a href="<?= base_url('uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $current_lesson['content_path']) ?>" target="_blank" class="btn btn-outline-light">View Slide (Static)</a>
+        <?php 
+             $prefix   = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
+             $fileRel  = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
+             $pdfUrl   = \App\Helpers\UrlSignerHelper::sign(base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $fileRel));
+        ?>
+        <div class="w-100 h-100 bg-black d-flex flex-column position-relative overflow-hidden">
+            <!-- Glassmorphism Floating Toolbar (Top) -->
+            <div class="position-absolute top-0 start-50 translate-middle-x mt-3 d-flex align-items-center bg-dark bg-opacity-75 backdrop-blur border border-white border-opacity-10 rounded-pill px-3 py-2 text-white shadow-lg" style="z-index: 100; backdrop-filter: blur(8px);">
+                <div class="btn-group me-2">
+                    <button class="btn btn-link text-white p-0 me-3" id="pdf-prev" title="Previous (Left Arrow)"><i class="bi bi-arrow-left-circle fs-4"></i></button>
+                    <button class="btn btn-link text-white p-0" id="pdf-next" title="Next (Right Arrow)"><i class="bi bi-arrow-right-circle fs-4"></i></button>
+                </div>
+                <div class="vr mx-2 opacity-25"></div>
+                <div class="px-2 d-flex align-items-center gap-1">
+                    <span class="small fw-medium text-white-50">Slide</span>
+                    <input type="number" id="pdf-page-input" value="1" min="1" 
+                           class="form-control form-control-sm bg-white bg-opacity-10 border border-white border-opacity-10 text-primary text-center fw-bold p-0" 
+                           style="width: 48px; height: 28px; border-radius: 6px; box-shadow: none; font-size: 0.95rem; appearance: textfield; -moz-appearance: textfield;">
+                    <span class="small opacity-25">/</span>
+                    <span id="pdf-page-count" class="small fw-medium text-white-50">0</span>
+                </div>
+                <div class="vr mx-2 opacity-25"></div>
+                <div class="btn-group ms-2">
+                    <button class="btn btn-link text-white p-0 me-3" id="pdf-zoom-out"><i class="bi bi-dash-circle"></i></button>
+                    <button class="btn btn-link text-white p-0" id="pdf-zoom-in"><i class="bi bi-plus-circle"></i></button>
+                </div>
+            </div>
+
+            <!-- PDF Scroll Container -->
+            <div class="flex-grow-1 overflow-auto d-flex align-items-start justify-content-center p-5 pt-5" id="pdf-scroll-container" style="scroll-behavior: smooth; background: radial-gradient(circle at center, #1e293b 0%, #000 100%);">
+                <div class="position-relative">
+                    <canvas id="pdf-canvas" class="shadow-2xl rounded-1 transition-all" style="max-width: 100%; height: auto;"></canvas>
+                    <div id="pdf-loader" class="position-absolute top-50 start-50 translate-middle text-center">
+                        <div class="spinner-grow text-primary" role="status"></div>
+                        <div class="mt-2 text-white-50 small">Preparing Slides...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Next Lesson Toast (Hidden initially) -->
+            <div id="next-lesson-toast" class="position-absolute bottom-0 start-50 translate-middle-x mb-4 bg-primary text-white px-4 py-2 rounded-pill shadow-lg transition-all" style="display:none; z-index: 200; transform: translateY(100px); opacity: 0;">
+                <i class="bi bi-rocket-takeoff me-2"></i> Last slide reached! Moving to next lesson...
+            </div>
         </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <script>
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            (function() {
+                let pdfDoc = null, pageNum = 1, pageRendering = false, pageNumPending = null, scale = 1.5,
+                    canvas = document.getElementById('pdf-canvas'), ctx = canvas.getContext('2d'),
+                    pageInput = document.getElementById('pdf-page-input'),
+                    nextLessonUrl = '<?= $nextLessonUrl ?>';
+
+                function renderPage(num) {
+                    pageRendering = true;
+                    pdfDoc.getPage(num).then((page) => {
+                        const viewport = page.getViewport({ scale: scale });
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        const renderContext = { canvasContext: ctx, viewport: viewport };
+                        page.render(renderContext).promise.then(() => {
+                            pageRendering = false;
+                            if (pageNumPending !== null) { renderPage(pageNumPending); pageNumPending = null; }
+                        });
+                    });
+                    pageInput.value = num;
+                }
+
+                function queueRenderPage(num) {
+                    if (pageRendering) pageNumPending = num; else renderPage(num);
+                }
+
+                function handleNext() {
+                    if (pageNum >= pdfDoc.numPages) {
+                        if (nextLessonUrl) {
+                            const toast = document.getElementById('next-lesson-toast');
+                            toast.style.display = 'block';
+                            setTimeout(() => {
+                                toast.style.transform = 'translate(-50%, -20px)';
+                                toast.style.opacity = '1';
+                            }, 10);
+                            setTimeout(() => { window.location.href = nextLessonUrl; }, 1500);
+                        }
+                        return;
+                    }
+                    pageNum++;
+                    queueRenderPage(pageNum);
+                    document.getElementById('pdf-scroll-container').scrollTop = 0;
+                }
+
+                function handlePrev() {
+                    if (pageNum <= 1) return;
+                    pageNum--;
+                    queueRenderPage(pageNum);
+                    document.getElementById('pdf-scroll-container').scrollTop = 0;
+                }
+
+                pdfjsLib.getDocument('<?= $pdfUrl ?>').promise.then((pdfDoc_) => {
+                    pdfDoc = pdfDoc_;
+                    document.getElementById('pdf-page-count').textContent = pdfDoc.numPages;
+                    pageInput.max = pdfDoc.numPages;
+                    document.getElementById('pdf-loader').style.display = 'none';
+                    renderPage(pageNum);
+                });
+
+                document.getElementById('pdf-prev').onclick = handlePrev;
+                document.getElementById('pdf-next').onclick = handleNext;
+                document.getElementById('pdf-zoom-in').onclick = () => { scale += 0.25; queueRenderPage(pageNum); };
+                document.getElementById('pdf-zoom-out').onclick = () => { if (scale <= 0.5) return; scale -= 0.25; queueRenderPage(pageNum); };
+
+                pageInput.onchange = () => {
+                    let num = parseInt(pageInput.value);
+                    if (isNaN(num) || num < 1) num = 1;
+                    if (num > pdfDoc.numPages) num = pdfDoc.numPages;
+                    pageNum = num;
+                    queueRenderPage(pageNum);
+                };
+                pageInput.onkeydown = (e) => { e.stopPropagation(); };
+
+                // Keyboard Shortcuts
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); handleNext(); }
+                    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); handlePrev(); }
+                });
+            })();
+        </script>
     <?php elseif($current_lesson['type'] == 'markdown'): ?>
         <!-- Markdown Viewer -->
         <div id="md-viewer" style="width:100%;height:100%;overflow-y:auto;background:#1e1e2e;color:#cdd6f4;padding:2rem 2.5rem;">
@@ -112,7 +281,7 @@
                     $prefix  = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
                     $mdRel   = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
                 ?>
-                var mdUrl = '<?= base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $mdRel) ?>';
+                var mdUrl = '<?= \App\Helpers\UrlSignerHelper::sign(base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $mdRel)) ?>';
 
                 fetch(mdUrl, { credentials: 'same-origin' })
                     .then(function(r) {
@@ -142,14 +311,29 @@
             #md-content td,#md-content th { border:1px solid #45475a; padding:6px 12px; }
             #md-content th { background:#313244; }
         </style>
-    <?php else: ?>
-        <div class="text-white text-center">
+    <?php elseif($current_lesson['type'] == 'podcast'): ?>
+        <div class="text-white text-center p-5">
             <i class="bi bi-mic fs-1 mb-3 d-block"></i>
             <h4>Audio Content</h4>
-            <audio controls class="mt-3">
-                <source src="<?= base_url('uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $current_lesson['content_path']) ?>" type="audio/mpeg">
+            <?php 
+                 $prefix   = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
+                 $fileRel  = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
+                 $audioUrl = \App\Helpers\UrlSignerHelper::sign(base_url('media/stream/video/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $fileRel));
+            ?>
+            <audio id="audio-player" controls class="mt-3">
+                <source src="<?= $audioUrl ?>" type="audio/mpeg">
             </audio>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const player = new Plyr('#audio-player', {
+                    controls: ['play', 'progress', 'current-time', 'mute', 'volume']
+                });
+                player.on('ended', () => {
+                    if (nextLessonUrl) window.location.href = nextLessonUrl;
+                });
+            });
+        </script>
     <?php endif; ?>
 
     <!-- Download Button Overlay if allowed -->
@@ -157,7 +341,8 @@
         <?php 
             $prefix   = 'uploads/lessons/' . $course['id'] . '/' . $current_lesson['section_id'] . '/';
             $fileRel  = ltrim(str_replace($prefix, '', $current_lesson['content_path']), '/');
-            $downloadUrl = base_url('media/download/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $fileRel);
+            $rawDownloadUrl = base_url('media/download/' . $course['id'] . '/' . $current_lesson['section_id'] . '/' . $fileRel);
+            $downloadUrl = \App\Helpers\UrlSignerHelper::sign($rawDownloadUrl);
         ?>
         <div style="position:absolute;bottom:20px;right:20px;z-index:30;">
             <a href="<?= $downloadUrl ?>" class="btn btn-sm btn-light shadow-sm">
@@ -233,5 +418,15 @@ we'd need to adjust the layout. For now, let's keep it simple.) -->
     .x-small { font-size: 0.75rem; }
     .transition-all { transition: all 0.2s ease; }
     .list-group-item.active { border-left: 4px solid #fff; }
+
+    /* Hide Spinners (Up/Down buttons) for PDF Page Input */
+    input#pdf-page-input::-webkit-outer-spin-button,
+    input#pdf-page-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input#pdf-page-input[type=number] {
+        -moz-appearance: textfield;
+    }
 </style>
 <?= $this->endSection() ?>

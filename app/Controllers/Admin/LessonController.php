@@ -83,13 +83,31 @@ class LessonController extends BaseController
 
         $lessonModel = new LessonModel();
 
-        if (! $this->validate($lessonModel->getValidationRules())) {
+        // ── Pre-detect Type for Validation ───────────────────────────
+        $type = $this->request->getPost('type');
+        $file = $this->request->getFile('content_file');
+        $externalUrl = $this->request->getPost('external_url');
+
+        if (empty($type)) {
+            if (!empty($externalUrl)) {
+                $type = 'video'; // Default for external URL
+            } elseif ($file && $file->isValid()) {
+                $type = $this->_detectType($file->getExtension());
+            } else {
+                // Fallback for draft/empty lesson if needed, but usually we need something
+                $type = 'video'; 
+            }
+        }
+
+        $rules = $lessonModel->getValidationRules();
+        $validationData = array_merge($this->request->getPost(), ['type' => $type]);
+
+        if (! $this->validateData($validationData, $rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $contentPath = null;
-        $detectedType = null;
-        $file = $this->request->getFile('content_file');
+        $detectedType = $type; 
 
         if ($file && $file->isValid() && ! $file->hasMoved()) {
             $destPath = 'uploads/lessons/' . $section['course_id'] . '/' . $section_id . '/';
@@ -129,7 +147,7 @@ class LessonController extends BaseController
             'course_id'       => $section['course_id'],
             'section_id'      => $section_id,
             'title'           => $this->request->getPost('title'),
-            'type'            => $this->request->getPost('type') ?? ($detectedType ?? 'video'), 
+            'type'            => $detectedType, 
             'duration'        => $this->request->getPost('duration') ?? 0,
             'sort_order'      => $this->request->getPost('sort_order') ?? 0,
             'status'          => $this->request->getPost('status'),
@@ -178,13 +196,30 @@ class LessonController extends BaseController
             return redirect()->to('admin/courses')->with('error', 'Unauthorized: You do not own this course');
         }
 
-        if (! $this->validate($lessonModel->getValidationRules())) {
+        $type = $this->request->getPost('type');
+        $file = $this->request->getFile('content_file');
+        $externalUrl = $this->request->getPost('external_url');
+
+        if (empty($type)) {
+            if (!empty($externalUrl)) {
+                 $type = 'video';
+            } elseif ($file && $file->isValid()) {
+                 $type = $this->_detectType($file->getExtension());
+            } else {
+                 $type = $lesson['type']; // keep existing
+            }
+        }
+
+        $rules = $lessonModel->getValidationRules();
+        $validationData = array_merge($this->request->getPost(), ['type' => $type]);
+
+        if (! $this->validateData($validationData, $rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $data = [
             'title'           => $this->request->getPost('title'),
-            'type'            => $this->request->getPost('type'),
+            'type'            => $type,
             'duration'        => $this->request->getPost('duration') ?? 0,
             'sort_order'      => $this->request->getPost('sort_order') ?? 0,
             'status'          => $this->request->getPost('status'),

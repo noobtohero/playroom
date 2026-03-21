@@ -85,13 +85,21 @@ class AuthController extends BaseController
 
     private function setUserSession($user)
     {
+        $loginToken = bin2hex(random_bytes(16));
         $data = [
-            'id'         => $user['id'],
-            'name'       => $user['name'],
-            'email'      => $user['email'],
-            'role'       => $user['role'],
+            'id' => $user['id'],
+            'name' => $user['name'],
+            'full_name' => $user['full_name'] ?? $user['name'],
+            'email' => $user['email'],
+            'role' => $user['role'],
             'isLoggedIn' => true,
+            'login_token' => $loginToken,
         ];
+        
+        $userModel = new \App\Models\UserModel();
+        $userModel->update($user['id'], [
+            'last_session_id' => $loginToken
+        ]);
 
         session()->set($data);
         return true;
