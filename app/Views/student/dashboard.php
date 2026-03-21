@@ -60,11 +60,11 @@
                             </div>
 
                             <div class="progress mb-2" style="height: 8px; background-color: #f1f5f9;">
-                                <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: <?= $course['progress'] ?>%;" aria-valuenow="<?= $course['progress'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
                             <div class="d-flex justify-content-between text-muted extra-small">
-                                <span>0% Completed</span>
-                                <span class="fw-bold text-primary">0 / 0 Lessons</span>
+                                <span><?= $course['progress'] ?>% Completed</span>
+                                <span class="fw-bold text-primary"><?= $course['completed_lessons'] ?> / <?= $course['total_lessons'] ?> Lessons</span>
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-0 p-4 pt-0">
@@ -78,6 +78,32 @@
         <?php endif; ?>
     </div>
 </div>
+
+<!-- ===== TROPHY SHOWCASE ===== -->
+<?php if (!empty($user_trophies)): ?>
+<div class="container-fluid px-4 mt-2 mb-4">
+    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 16px; overflow: hidden;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bi bi-trophy-fill text-warning fs-4 me-2"></i>
+                <h5 class="mb-0 text-white fw-bold">My Achievements</h5>
+                <span class="badge bg-warning text-dark ms-2 rounded-pill"><?= count($user_trophies) ?></span>
+            </div>
+            <div class="d-flex flex-wrap gap-3">
+                <?php foreach ($user_trophies as $trophy): ?>
+                <div class="trophy-badge" title="<?= esc($trophy['description']) ?>">
+                    <div class="d-flex flex-column align-items-center p-3" style="background: rgba(255,255,255,0.1); border-radius: 14px; min-width: 100px; border: 1px solid rgba(255,255,255,0.15);">
+                        <i class="bi <?= esc($trophy['icon']) ?> fs-1 mb-1" style="color: #fbbf24;"></i>
+                        <span class="small fw-bold text-white text-center" style="font-size: 0.78rem;"><?= esc($trophy['name']) ?></span>
+                        <span class="text-white-50" style="font-size: 0.65rem;"><?= date('M j', strtotime($trophy['earned_at'])) ?></span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <style>
     .transition-all {

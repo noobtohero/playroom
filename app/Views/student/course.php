@@ -18,11 +18,17 @@
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
             <div class="d-inline-block text-start">
                 <div class="text-white-50 small mb-1">Course Progress</div>
-                <div class="d-flex align-items-center">
+                 <div class="d-flex align-items-center">
                     <div class="progress flex-grow-1 me-3 bg-secondary" style="height: 8px; width: 150px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $course_progress ?>%;"></div>
                     </div>
-                    <span class="fw-bold">0%</span>
+                    <span class="fw-bold me-3"><?= $course_progress ?>%</span>
+                    
+                    <?php if($course_progress >= 100): ?>
+                        <a href="<?= base_url('student/course/' . $course['id'] . '/certificate') ?>" class="btn btn-sm btn-warning fw-bold rounded-pill px-3 shadow-sm">
+                            <i class="bi bi-patch-check-fill me-1"></i> Get Certificate
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -69,7 +75,11 @@
                                                         </div>
                                                     </div>
                                                     
-                                                    <div class="text-muted small">
+                                                    <div class="text-muted small d-flex align-items-center">
+                                                        <?php if($lesson['is_completed']): ?>
+                                                            <i class="bi bi-check-circle-fill text-success me-3 fs-5"></i>
+                                                        <?php endif; ?>
+                                                        
                                                         <?php if($lesson['duration'] > 0): ?>
                                                             <?= floor($lesson['duration'] / 60) ?>m <?= $lesson['duration'] % 60 ?>s
                                                         <?php endif; ?>

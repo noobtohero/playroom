@@ -22,12 +22,38 @@ class DashboardController extends BaseController
         $revenueBuilder->where('purchases.status', 'approved');
         $revenue = $revenueBuilder->get()->getRow()->total_revenue ?? 0;
 
+        // Enrollment Trends
+        $total_enrollments = $db->table('enrollments')->countAllResults();
+        
+        // Learning Activity (Last 7 Days)
+        $daily_activity = $db->table('lesson_progress')
+                             ->select("DATE(updated_at) as date, COUNT(*) as count")
+                             ->where('updated_at >=', date('Y-m-d', strtotime('-7 days')))
+                             ->groupBy('date')
+                             ->orderBy('date', 'ASC')
+                             ->get()
+                             ->getResultArray();
+
+        // Top Courses by Completion
+        $course_completion = $db->table('lesson_progress')
+                                ->select('courses.title, COUNT(DISTINCT lesson_progress.user_id) as student_count')
+                                ->join('courses', 'courses.id = lesson_progress.course_id')
+                                ->where('lesson_progress.is_completed', 1)
+                                ->groupBy('lesson_progress.course_id')
+                                ->orderBy('student_count', 'DESC')
+                                ->limit(5)
+                                ->get()
+                                ->getResultArray();
+
         $data = [
-            'total_users'    => $userModel->countAllResults(),
-            'total_students' => $userModel->where('role', 'student')->countAllResults(),
-            'total_courses'  => $courseModel->countAllResults(),
-            'revenue'        => $revenue,
-            'recent_purchases' => $db->table('purchases')
+            'total_users'       => $userModel->countAllResults(),
+            'total_students'    => $userModel->where('role', 'student')->countAllResults(),
+            'total_courses'     => $courseModel->countAllResults(),
+            'total_enrollments' => $total_enrollments,
+            'revenue'           => $revenue,
+            'daily_activity'    => $daily_activity,
+            'top_courses'       => $course_completion,
+            'recent_purchases'  => $db->table('purchases')
                                      ->select('purchases.*, users.name as user_name, courses.title as course_title')
                                      ->join('users', 'users.id = purchases.user_id')
                                      ->join('courses', 'courses.id = purchases.course_id')
@@ -35,7 +61,7 @@ class DashboardController extends BaseController
                                      ->limit(5)
                                      ->get()
                                      ->getResultArray(),
-            'revenue_chart' => $db->table('purchases')
+            'revenue_chart'     => $db->table('purchases')
                                      ->select("DATE(purchases.created_at) as date, SUM(courses.price) as total")
                                      ->join('courses', 'courses.id = purchases.course_id')
                                      ->where('purchases.status', 'approved')

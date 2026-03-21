@@ -16,92 +16,101 @@
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         :root {
-            /* Custom Plyr Colors */
+            /* Default Variables (Light Mode) */
+            --bg-main: #f8fafc;
+            --bg-header: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+            --bg-sidebar: #ffffff;
+            --text-main: #1e293b;
+            --text-header: #ffffff;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --card-bg: #ffffff;
+            --hover-bg: #f1f5f9;
+            --primary-color: #0d6efd;
+            
+            /* Plyr Colors */
             --plyr-color-main: #0d6efd;
             --plyr-video-background: #000;
         }
-        .plyr--full-ui.plyr--video .plyr__control--overlaid {
-            background: rgba(13, 110, 253, 0.8);
+
+        [data-theme="dark"] {
+            --bg-main: #020617;
+            --bg-header: #020617;
+            --bg-sidebar: #0f172a;
+            --text-main: #f1f5f9;
+            --text-header: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #1e293b;
+            --card-bg: #0f172a;
+            --hover-bg: #1e293b;
         }
-        .plyr--video .plyr__controls {
-            padding: 15px !important;
-            background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.6)) !important;
-        }
-    </style>
-    <!-- Custom CSS -->
-    <style>
-        :root {
-            --primary-color: #0d6efd;
-            --dark-bg: #0f172a;
-            --sidebar-bg: #ffffff;
-            --card-border: rgba(0,0,0,0.05);
-        }
+
         body { 
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; 
-            margin: 0; 
-            padding: 0; 
-            height: 100vh; 
-            overflow: hidden;
-            display: flex; 
-            flex-direction: column; 
-            color: #1e293b;
+            background-color: var(--bg-main); 
+            color: var(--text-main);
+            margin: 0; padding: 0; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
+
         .learning-header { 
-            position: sticky;
-            top: 0;
-            z-index: 1030;
-            flex-shrink: 0; 
-            background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+            position: sticky; top: 0; z-index: 1030; flex-shrink: 0; 
+            background: var(--bg-header);
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-header);
         }
+
         .learning-body { flex-grow: 1; display: flex; height: calc(100vh - 64px); overflow: hidden; }
+
         .content-area { 
-            flex-grow: 1; 
-            overflow: hidden; 
-            padding: 0; 
+            flex-grow: 1; overflow: hidden; padding: 0; 
             background-color: #000; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
             position: relative;
         }
+
         .sidebar-area { 
-            width: 360px; 
-            flex-shrink: 0; 
-            background-color: var(--sidebar-bg); 
-            border-left: 1px solid #e2e8f0; 
-            overflow-y: auto; 
-            display: flex;
-            flex-direction: column;
+            width: 360px; flex-shrink: 0; 
+            background-color: var(--bg-sidebar); 
+            border-left: 1px solid var(--border-color); 
+            overflow-y: auto; display: flex; flex-direction: column;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
+
         .lesson-item { 
-            padding: 1rem 1.25rem; 
-            border-bottom: 1px solid #f1f5f9; 
-            cursor: pointer; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            color: #475569;
-            text-decoration: none;
-            display: block;
+            padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); 
+            cursor: pointer; transition: all 0.2s ease;
+            color: var(--text-muted); text-decoration: none; display: block;
         }
-        .lesson-item:hover { background-color: #f8fafc; color: var(--primary-color); }
+        .lesson-item:hover { background-color: var(--hover-bg); color: var(--primary-color); }
         .lesson-item.active { 
-            background-color: #f1f5f9; 
+            background-color: var(--hover-bg); 
             border-left: 4px solid var(--primary-color); 
-            color: var(--primary-color);
-            font-weight: 600; 
+            color: var(--primary-color); font-weight: 600; 
         }
+
+        /* Dashboard specific overrides */
+        .container-fluid.bg-white { background-color: var(--bg-main) !important; }
+        .card { background-color: var(--card-bg); border-color: var(--border-color) !important; color: var(--text-main); }
+        .accordion-item { background-color: var(--card-bg); color: var(--text-main); border-color: var(--border-color) !important; }
+        .accordion-button { background-color: var(--card-bg) !important; color: var(--text-main) !important; }
+        .list-group-item { background-color: var(--card-bg); color: var(--text-main); border-color: var(--border-color) !important; }
+        .bg-light { background-color: var(--hover-bg) !important; color: var(--text-main) !important; }
+
         .btn-premium {
             background: linear-gradient(135deg, #0d6efd 0%, #001f3f 100%);
-            border: none;
-            color: white;
-            transition: transform 0.2s;
+            border: none; color: white; transition: transform 0.2s;
         }
-        .btn-premium:hover {
-            transform: scale(1.02);
-            color: #fff;
+        .btn-premium:hover { transform: scale(1.02); color: #fff; }
+
+        .theme-toggle {
+            cursor: pointer; padding: 8px; border-radius: 50%; width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; transition: all 0.3s ease;
         }
+        .theme-toggle:hover { background: rgba(255,255,255,0.2); transform: rotate(15deg); }
     </style>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
@@ -142,6 +151,9 @@
             </div>
         </div>
         <div class="d-flex align-items-center">
+            <button onclick="toggleTheme()" class="theme-toggle me-3" id="theme-btn" title="Toggle Dark/Light Mode">
+                <i class="bi bi-sun-fill" id="theme-icon"></i>
+            </button>
             <?php if(session()->get('role') === 'admin'): ?>
                 <a href="<?= base_url('admin/dashboard') ?>" class="btn btn-warning btn-sm me-3 fw-bold rounded-pill px-3">Admin Panel</a>
             <?php endif; ?>
@@ -152,6 +164,38 @@
             <a href="<?= base_url('logout') ?>" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm">Logout</a>
         </div>
     </header>
+
+    <script>
+        // Theme Management
+        const themeBtn = document.getElementById('theme-btn');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+
+        function updateThemeUI(theme) {
+            if (theme === 'dark') {
+                themeIcon.classList.replace('bi-sun-fill', 'bi-moon-stars-fill');
+                themeBtn.title = "Switch to Light Mode";
+            } else {
+                themeIcon.classList.replace('bi-moon-stars-fill', 'bi-sun-fill');
+                themeBtn.title = "Switch to Dark Mode";
+            }
+        }
+
+        function toggleTheme() {
+            const current = html.getAttribute('data-theme') || 'light';
+            const target = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', target);
+            localStorage.setItem('theme', target);
+            updateThemeUI(target);
+        }
+
+        // Apply theme immediately to avoid flicker
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            html.setAttribute('data-theme', savedTheme);
+            updateThemeUI(savedTheme);
+        });
+    </script>
 
     <!-- Learning Area -->
     <main class="learning-body">

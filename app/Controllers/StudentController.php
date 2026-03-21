@@ -21,7 +21,28 @@ class StudentController extends BaseController
         $builder->where('courses.status', 'published');
         $builder->orderBy('enrollments.created_at', 'DESC');
         
-        $data['my_courses'] = $builder->get()->getResultArray();
+        $my_courses = $builder->get()->getResultArray();
+        
+        $progressModel = new \App\Models\LessonProgressModel();
+        $lessonModel = new \App\Models\LessonModel();
+
+        foreach ($my_courses as &$course) {
+            $course['progress'] = $progressModel->getCourseProgress($userId, (int)$course['id']);
+            $course['total_lessons'] = $lessonModel->where('course_id', $course['id'])->where('status', 'published')->countAllResults();
+            $course['completed_lessons'] = $progressModel->where('user_id', $userId)->where('course_id', $course['id'])->where('is_completed', 1)->countAllResults();
+        }
+
+        $data['my_courses'] = $my_courses;
+
+        // Fetch user trophies
+        $db2 = \Config\Database::connect();
+        $data['user_trophies'] = $db2->table('user_trophies')
+                                     ->select('trophies.name, trophies.description, trophies.icon, user_trophies.earned_at')
+                                     ->join('trophies', 'trophies.id = user_trophies.trophy_id')
+                                     ->where('user_trophies.user_id', $userId)
+                                     ->orderBy('user_trophies.earned_at', 'DESC')
+                                     ->get()
+                                     ->getResultArray();
 
         return view('student/dashboard', $data);
     }
@@ -101,14 +122,25 @@ class StudentController extends BaseController
                                  ->orderBy('sort_order', 'ASC')
                                  ->findAll();
 
+        $progressModel = new \App\Models\LessonProgressModel();
+        $completedLessons = $progressModel->where('user_id', session()->get('id'))
+                                          ->where('course_id', $course_id)
+                                          ->where('is_completed', 1)
+                                          ->findColumn('lesson_id') ?? [];
+
         foreach ($sections as &$section) {
             $section['lessons'] = $lessonModel->where('section_id', $section['id'])
                                               ->where('status', 'published')
                                               ->orderBy('sort_order', 'ASC')
                                               ->findAll();
+            
+            foreach ($section['lessons'] as &$lesson) {
+                $lesson['is_completed'] = in_array($lesson['id'], $completedLessons);
+            }
         }
         
         $data['sections'] = $sections;
+        $data['course_progress'] = $progressModel->getCourseProgress(session()->get('id'), (int)$course_id);
 
         return view('student/course', $data);
     }
@@ -136,14 +168,60 @@ class StudentController extends BaseController
                                  ->orderBy('sort_order', 'ASC')
                                  ->findAll();
 
+        $progressModel = new \App\Models\LessonProgressModel();
+        $bookmarkModel = new \App\Models\VideoBookmarkModel();
+
+        $completedLessons = $progressModel->where('user_id', session()->get('id'))
+                                          ->where('course_id', $course_id)
+                                          ->where('is_completed', 1)
+                                          ->findColumn('lesson_id') ?? [];
+
+        $bookmark = $bookmarkModel->where('user_id', session()->get('id'))
+                                  ->where('lesson_id', $lesson_id)
+                                  ->first();
+        $data['last_watched_time'] = $bookmark ? $bookmark['last_time'] : 0;
+
+        $notesModel = new \App\Models\UserNotesModel();
+        $userNote = $notesModel->where('user_id', session()->get('id'))->where('lesson_id', $lesson_id)->first();
+        $data['user_note'] = $userNote ? $userNote['content'] : '';
+
         foreach ($sections as &$section) {
             $section['lessons'] = $lessonModel->where('section_id', $section['id'])
                                               ->where('status', 'published')
                                               ->orderBy('sort_order', 'ASC')
                                               ->findAll();
+            
+            foreach ($section['lessons'] as &$lesson) {
+                $lesson['is_completed'] = in_array($lesson['id'], $completedLessons);
+            }
         }
         $data['sections'] = $sections;
 
         return view('student/lesson', $data);
+    }
+
+    public function certificate($course_id)
+    {
+        $userId = session()->get('id');
+        $courseModel = new \App\Models\CourseModel();
+        $course = $courseModel->find($course_id);
+
+        if (!$course) {
+            return redirect()->to('student/dashboard')->with('error', 'Course not found.');
+        }
+
+        $progressModel = new \App\Models\LessonProgressModel();
+        $progress = $progressModel->getCourseProgress($userId, (int)$course_id);
+
+        if ($progress < 100) {
+            return redirect()->to('student/course/' . $course_id)->with('error', 'You must complete all lessons to earn a certificate.');
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $data['user'] = $userModel->find($userId);
+        $data['course'] = $course;
+        $data['completed_at'] = date('F j, Y');
+
+        return view('student/certificate', $data);
     }
 }

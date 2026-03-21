@@ -26,9 +26,11 @@ $routes->group('student', ['filter' => 'auth'], function($routes) {
     $routes->get('course/(:num)', 'StudentController::course/$1');
     $routes->get('course/(:num)/lesson/(:num)', 'StudentController::lesson/$1/$2');
     
-    // Redeem Code
-    $routes->get('redeem', 'StudentController::redeem');
-    $routes->post('redeem', 'StudentController::redeemAttempt');
+    // Progress Tracking & Notes
+    $routes->post('progress/save', 'Student\ProgressController::saveLessonProgress');
+    $routes->post('progress/bookmark', 'Student\ProgressController::saveVideoBookmark');
+    $routes->post('progress/note', 'Student\ProgressController::saveNote');
+    $routes->get('course/(:num)/certificate', 'StudentController::certificate/$1');
 });
 
 // Media Streaming Route (Secured by AuthFilter which handles both Session and Signed URLs)

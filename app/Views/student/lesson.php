@@ -5,6 +5,41 @@
 <?= $this->section('course_title') ?><?= esc($course['title']) ?><?= $this->endSection() ?>
 
 <?= $this->section('player') ?>
+
+<script>
+    // Progress & Bookmark Sync Helpers
+    const currentLessonId = '<?= $current_lesson['id'] ?>';
+    const lastWatchedTime = <?= $last_watched_time ?? 0 ?>;
+
+    function saveProgress(status = 1) {
+        fetch('<?= base_url('student/progress/save') ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+            body: `lesson_id=${currentLessonId}&status=${status}`
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                // Optionally update UI without refresh
+                const activeItem = document.querySelector('.list-group-item.active');
+                if (activeItem && !activeItem.querySelector('.bi-check-circle-fill')) {
+                    const check = document.createElement('i');
+                    check.className = 'bi bi-check-circle-fill text-success ms-2';
+                    check.title = 'Completed';
+                    activeItem.appendChild(check);
+                }
+            }
+        });
+    }
+
+    function saveBookmark(time) {
+        if (time <= 0) return;
+        fetch('<?= base_url('student/progress/bookmark') ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+            body: `lesson_id=${currentLessonId}&last_time=${time}`
+        });
+    }
+</script>
+
 <div class="position-relative w-100 h-100 d-flex align-items-center justify-content-center bg-black">
     <!-- Watermark Overlay -->
     <!-- Watermark Overlay (Moved to Top Right and subtle) -->
@@ -73,7 +108,22 @@
                     controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
                     youtube: { noCookie: true, rel: 0, showinfo: 0, iv_load_policy: 3, modestbranding: 1 }
                 });
+
+                let lastSaved = 0;
+                player.on('timeupdate', () => {
+                    const now = Math.floor(player.currentTime);
+                    if (now > 0 && now % 15 === 0 && now !== lastSaved) {
+                        lastSaved = now;
+                        saveBookmark(now);
+                    }
+                });
+
+                player.on('ready', () => {
+                    if (lastWatchedTime > 0) player.currentTime = lastWatchedTime;
+                });
+
                 player.on('ended', () => {
+                    saveProgress(1);
                     if (nextLessonUrl) window.location.href = nextLessonUrl;
                 });
             });
@@ -117,6 +167,12 @@
 
                     hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
                         video.play().catch(function(){});
+
+                        // Resume from last watched time
+                        if (lastWatchedTime > 0) {
+                            video.currentTime = lastWatchedTime;
+                        }
+
                         if (data.levels && data.levels.length > 1) {
                             qualBar.style.display = 'block';
                             data.levels.forEach(function(level, index) {
@@ -128,15 +184,36 @@
                         }
                     });
 
+                    // Periodic bookmark save every 15 seconds
+                    let lastSavedHls = 0;
+                    video.addEventListener('timeupdate', function() {
+                        const now = Math.floor(video.currentTime);
+                        if (now > 0 && now % 15 === 0 && now !== lastSavedHls) {
+                            lastSavedHls = now;
+                            saveBookmark(now);
+                        }
+                    });
+
                     qualSel.addEventListener('change', function() {
                         hls.currentLevel = parseInt(this.value);
                     });
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                     video.src = videoSrc;
                     video.play().catch(function(){});
+                    if (lastWatchedTime > 0) video.currentTime = lastWatchedTime;
+
+                    let lastSaved = 0;
+                    video.addEventListener('timeupdate', function() {
+                        const now = Math.floor(video.currentTime);
+                        if (now > 0 && now % 15 === 0 && now !== lastSaved) {
+                            lastSaved = now;
+                            saveBookmark(now);
+                        }
+                    });
                 }
 
                 player.on('ended', () => {
+                    saveProgress(1);
                     if (nextLessonUrl) window.location.href = nextLessonUrl;
                 });
             });
@@ -217,6 +294,7 @@
 
                 function handleNext() {
                     if (pageNum >= pdfDoc.numPages) {
+                        saveProgress(1);
                         if (nextLessonUrl) {
                             const toast = document.getElementById('next-lesson-toast');
                             toast.style.display = 'block';
@@ -290,6 +368,7 @@
                     })
                     .then(function(text) {
                         document.getElementById('md-content').innerHTML = marked.parse(text);
+                        saveProgress(1); // Auto-complete markdown on load
                     })
                     .catch(function(e) {
                         document.getElementById('md-content').innerHTML =
@@ -329,7 +408,13 @@
                 const player = new Plyr('#audio-player', {
                     controls: ['play', 'progress', 'current-time', 'mute', 'volume']
                 });
+
+                player.on('ready', () => {
+                    if (lastWatchedTime > 0) player.currentTime = lastWatchedTime;
+                });
+
                 player.on('ended', () => {
+                    saveProgress(1);
                     if (nextLessonUrl) window.location.href = nextLessonUrl;
                 });
             });
@@ -357,6 +442,47 @@ we'd need to adjust the layout. For now, let's keep it simple.) -->
 <?= $this->endSection() ?>
 
 <?= $this->section('sidebar_content') ?>
+<div class="p-3 border-bottom bg-light">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-text me-2"></i> My Notes</h6>
+        <span id="note-status" class="x-small text-success fw-medium"></span>
+    </div>
+    <textarea id="user-note" class="form-control form-control-sm bg-white border-0 shadow-sm" 
+              rows="4" placeholder="Take some notes for this lesson..."
+              style="font-size: 0.85rem; resize: none; border-radius: 8px;"><?= esc($user_note) ?></textarea>
+</div>
+
+<script>
+    let noteTimeout;
+    const noteArea = document.getElementById('user-note');
+    const noteStatus = document.getElementById('note-status');
+
+    noteArea.addEventListener('input', (e) => {
+        clearTimeout(noteTimeout);
+        noteStatus.innerText = 'Typing...';
+        
+        noteTimeout = setTimeout(() => {
+            const content = e.target.value;
+            fetch('<?= base_url('student/progress/note') ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `lesson_id=${lessonId}&content=${encodeURIComponent(content)}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    noteStatus.innerText = 'Saved';
+                    setTimeout(() => noteStatus.innerText = '', 2000);
+                }
+            })
+            .catch(() => {
+                noteStatus.innerText = 'Error saving';
+                noteStatus.classList.replace('text-success', 'text-danger');
+            });
+        }, 1500);
+    });
+</script>
+
 <div class="accordion accordion-flush" id="sidebarAccordion">
     <?php foreach($sections as $index => $section): ?>
         <?php $isCurrentSection = ($current_lesson['section_id'] == $section['id']); ?>
@@ -391,7 +517,7 @@ we'd need to adjust the layout. For now, let's keep it simple.) -->
                                     <?php endif; ?>
                                 </span>
                                 
-                                <div class="flex-grow-1">
+                                 <div class="flex-grow-1">
                                     <div class="small fw-semibold lh-sm"><?= esc($lesson['title']) ?></div>
                                     <div class="x-small opacity-75 mt-1">
                                         <?php if($lesson['duration']): ?>
@@ -402,7 +528,9 @@ we'd need to adjust the layout. For now, let's keep it simple.) -->
                                     </div>
                                 </div>
 
-                                <?php if($isActive): ?>
+                                <?php if($lesson['is_completed']): ?>
+                                    <i class="bi bi-check-circle-fill text-success ms-2" title="Completed"></i>
+                                <?php elseif($isActive): ?>
                                     <i class="bi bi-play-fill ms-2"></i>
                                 <?php endif; ?>
                             </a>
