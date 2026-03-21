@@ -27,7 +27,7 @@ class AdminFilter implements FilterInterface
     {
         $role = session()->get('role');
         if (! in_array($role, ['super-admin', 'admin'])) {
-            return service('response')->setStatusCode(403)->setBody('Access Denied: Admin privileges required.');
+            return redirect()->to(base_url('login'))->with('error', 'Access Denied: Admin privileges required.');
         }
     }
 

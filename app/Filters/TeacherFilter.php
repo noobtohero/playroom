@@ -13,7 +13,7 @@ class TeacherFilter implements FilterInterface
         $role = session()->get('role');
         // Teachers, Admins, and Super-admins can access teacher tools
         if (! in_array($role, ['super-admin', 'admin', 'teacher'])) {
-            return service('response')->setStatusCode(403)->setBody('Access Denied: Teacher privileges required.');
+            return redirect()->to(base_url('login'))->with('error', 'Access Denied: Teacher privileges required.');
         }
     }
 
